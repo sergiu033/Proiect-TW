@@ -1,21 +1,18 @@
 server:
-  port: 8072
+  port: 9000
 spring:
   application:
-    name: "gatewayserver"
+    name: "review"
   zipkin:
     base-url: http://localhost:9411 #http://zipkin:9411
-  sleuth:
-    sampler:
-      probability: 1.0
-  cloud:
-    gateway:
-      server:
-        webflux:
-          discovery:
-            locator:
-              enabled: false # Tells Spring Cloud Gateway to use the DiscoveryClient to locate info about microservices
-              lower-case-service-id: true
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: postgres
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
 
 eureka:
   instance:
@@ -46,6 +43,6 @@ management:
 
 logging:
   level:
-    com:
+    org:
       example:
-        gatewayserver: INFO
+        enrollment: INFO

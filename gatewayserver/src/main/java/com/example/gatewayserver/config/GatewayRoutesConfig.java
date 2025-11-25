@@ -10,7 +10,10 @@ public class GatewayRoutesConfig {
 
     @Bean
     public RouteLocator routes(RouteLocatorBuilder builder) {
-//        add routes
-        return null;
+        return builder.routes()
+                .route("reviews", r -> r.path("/reviews/**")
+                        .filters(f -> f.setResponseHeader("Content-Language", "en-EN"))
+                        .uri("lb://review"))
+                .build();
     }
 }

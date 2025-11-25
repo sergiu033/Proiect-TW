@@ -1,0 +1,81 @@
+networks:
+  microservices-network:
+    driver: bridge
+
+services:
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - microservices-network
+
+  gatewayserver:
+    build: ./gatewayserver
+    image: proiecttw/gatewayserver:v1
+    ports:
+      - "8072:8072"  # only gateway exposed externally
+    networks:
+      - microservices-network
+    depends_on:
+      zipkin:
+        condition: service_started
+      eurekaserver:
+        condition: service_healthy
+      review:
+        condition: service_started
+
+
+  eurekaserver:
+    build: ./eurekaserver
+    image: proiecttw/eurekaserver:v1
+    ports:
+      - "8070:8070"
+    networks:
+      - microservices-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8070/actuator/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    depends_on:
+      zipkin:
+        condition: service_started
+
+  db:
+    image: postgres:18
+    ports:
+      - "5433:5432"
+    networks:
+      - microservices-network
+    environment:
+      POSTGRES_USER: ${SPRING_DATASOURCE_USERNAME}
+      POSTGRES_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    volumes:
+      #- postgres_data:/var/lib/postgresql/data //persist in container
+      #- ./postgres-data:/var/lib/postgresql/data
+      - ./db-init:/docker-entrypoint-initdb.d
+
+  review:
+    build: ./review
+    image: proiecttw/review:v1
+    #    ports:
+    #      - "9000:9000"
+    networks:
+      - microservices-network
+    environment:
+      EUREKA_CLIENT_SERVICEURL_DEFAULTZONE: http://eurekaserver:8070/eureka/
+      SPRING_DATASOURCE_URL: jdbc:postgresql://db:5432/postgres
+      SPRING_DATASOURCE_USERNAME: ${SPRING_DATASOURCE_USERNAME}
+      SPRING_DATASOURCE_PASSWORD: ${SPRING_DATASOURCE_PASSWORD}
+    depends_on:
+      db:
+        condition: service_started
+      zipkin:
+        condition: service_started
+      eurekaserver:
+        condition: service_healthy
