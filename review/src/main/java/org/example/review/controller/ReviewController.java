@@ -11,13 +11,13 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping(path="/")
+@RequestMapping(path="/reviews")
 public class ReviewController {
 
     @Autowired
     public IReviewService reviewService;
 
-    @PostMapping("/reviews")
+    @PostMapping()
     public ResponseEntity<ReviewDTO> createReview(@RequestBody ReviewCreateDTO reviewCreateDTO) {
         ReviewDTO createdReview = reviewService.createReview(reviewCreateDTO);
         return ResponseEntity
@@ -25,7 +25,7 @@ public class ReviewController {
                 .body(createdReview);
     }
 
-    @GetMapping("/reviews")
+    @GetMapping()
     public ResponseEntity<ReviewDTO> fetchReview(@RequestParam("id") Long id) {
         ReviewDTO fetchedReview = reviewService.fetchReview(id);
         return  ResponseEntity
@@ -33,7 +33,7 @@ public class ReviewController {
                 .body(fetchedReview);
     }
 
-    @PutMapping("/reviews")
+    @PutMapping()
     public ResponseEntity<ReviewDTO> updateReview(@RequestParam("id") Long id, @RequestBody ReviewDTO reviewDTO) {
         boolean isUpdated = reviewService.updateReview(id,  reviewDTO);
         if (isUpdated) {
@@ -48,7 +48,7 @@ public class ReviewController {
         }
     }
 
-    @DeleteMapping("/reviews")
+    @DeleteMapping()
     public ResponseEntity<String>  deleteReview(@RequestParam("id") Long id) {
         boolean isDeleted = reviewService.deleteReview(id);
         if (isDeleted) {

@@ -29,7 +29,7 @@ public class SecurityConfig {
                         .authenticationSuccessHandler(successHandler()))
                 .oauth2Client(Customizer.withDefaults())
                 .authorizeExchange(exchange -> exchange
-//                        add roles to endpoints
+                        .pathMatchers("/reviews/**").hasAnyRole("USER", "ADMIN")
                         .anyExchange().authenticated()
                 );
 
