@@ -2,6 +2,7 @@ package com.example.gatewayserver.auth;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -23,58 +24,77 @@ import java.util.Set;
 @Configuration
 public class SecurityConfig {
     @Bean
-    public SecurityWebFilterChain securityChain(ServerHttpSecurity http) {
+    public SecurityWebFilterChain securityFilterChain(ServerHttpSecurity http){
+
         http
                 .oauth2Login(oauth2 -> oauth2
                         .authenticationSuccessHandler(successHandler()))
                 .oauth2Client(Customizer.withDefaults())
                 .authorizeExchange(exchange -> exchange
-//                        add roles to endpoints
-                        .anyExchange().authenticated()
-                );
+                        // Allow unauthenticated access for login/logout (handled by the app logic)
+                        .pathMatchers(HttpMethod.POST, "/api/users/login", "/api/users/{id}/logout").permitAll()
 
+                        // CRUD Operations - Restricted to LIBRARIANS
+                        .pathMatchers(HttpMethod.POST, "/api/users").hasRole("LIBRARIAN") // createUser
+                        .pathMatchers(HttpMethod.GET, "/api/users").hasRole("LIBRARIAN") // getAllUsers
+                        .pathMatchers(HttpMethod.PUT, "/api/users/{id}").hasRole("LIBRARIAN") // updateUser
+                        .pathMatchers(HttpMethod.DELETE, "/api/users/{id}").hasRole("LIBRARIAN") // deleteUser
+
+                        // Specific User Access - PATRONS can view their own details; Staff can view all
+                        .pathMatchers(HttpMethod.GET, "/api/users/{id}").hasAnyRole("LIBRARIAN", "PATRON", "ARCHIVIST") // getUserById
+                        .pathMatchers(HttpMethod.POST, "/api/users/{id}/change-password").authenticated() // User must be logged in to change their own password
+
+                        // Search and Filter Endpoints - Restricted to Staff (Librarians and Archivists)
+                        .pathMatchers("/api/users/search", "/api/users/filter", "/api/users/sorted/**").hasAnyRole("LIBRARIAN", "ARCHIVIST")
+
+                        // All other exchanges must be authenticated
+                        .anyExchange().authenticated())
+                .csrf(csrf -> csrf.disable()); // Cross-Site Request Forgery
         return http.build();
     }
 
     @Bean
     public ReactiveOAuth2UserService<OidcUserRequest, OidcUser> oidcUserService() {
-        OidcReactiveOAuth2UserService handler = new OidcReactiveOAuth2UserService();
+        OidcReactiveOAuth2UserService delegate = new OidcReactiveOAuth2UserService();
 
         return new ReactiveOAuth2UserService<OidcUserRequest, OidcUser>() {
             @Override
-            public Mono<OidcUser> loadUser(OidcUserRequest userRequest) throws OAuth2AuthenticationException {
-                return handler.loadUser(userRequest)
+            public Mono<OidcUser> loadUser(OidcUserRequest userRequest) {
+                return delegate.loadUser(userRequest)
                         .map(oidcUser -> {
-                            Set<GrantedAuthority> authorities = new HashSet<>();
+                            Set<GrantedAuthority> mappedAuthorities = new HashSet<>(oidcUser.getAuthorities());
 
                             String email = oidcUser.getEmail();
                             if (email != null) {
-                                if (email.endsWith("@bookreviews.com") ) {
-                                    authorities.add(new SimpleGrantedAuthority("ROLE_ADMIN"));
-                                }
+                                // Assigning library roles based on email with the mandatory "ROLE_" prefix
+                                if (email.endsWith("@gmail.com"))
+                                    mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_LIBRARIAN"));
                                 else
-                                    authorities.add(new SimpleGrantedAuthority("ROLE_USER"));
+                                    mappedAuthorities.add(new SimpleGrantedAuthority("ROLE_PATRON"));
                             }
 
-                            return new DefaultOidcUser(authorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
+                            System.out.println("Mapped authorities: " + mappedAuthorities);
+
+                            return new DefaultOidcUser(mappedAuthorities, oidcUser.getIdToken(), oidcUser.getUserInfo());
                         });
             }
         };
     }
-
     @Bean
     public ServerAuthenticationSuccessHandler successHandler() {
         return (webFilterExchange, authentication) -> {
-            webFilterExchange
-                    .getExchange()
-                    .getResponse()
-                    .setStatusCode(HttpStatus.FOUND);
+            System.out.println("Authenticated authorities at success: " + authentication.getAuthorities());
 
             webFilterExchange
                     .getExchange()
                     .getResponse()
-                    .getHeaders()
-                    .set("Location", "http://localhost:8072/home");
+                    .setStatusCode(org.springframework.http.HttpStatus.FOUND);
+
+            // Assuming this is still the desired application entry point
+            webFilterExchange
+                    .getExchange()
+                    .getResponse()
+                    .getHeaders().set("Location", "http://localhost:8072/airport"); // You might want to change this URL to a library-themed one!
 
             return webFilterExchange.getExchange().getResponse().setComplete();
         };
