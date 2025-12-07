@@ -23,7 +23,7 @@ spring:
           google:
             client-id: 991955649342-2gpk5d4g8e1nh30j6sros762h4q9urqe.apps.googleusercontent.com
             client-secret: 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
-            scope: openid, profile, email
+            scope: openid, profile, email, https://www.googleapis.com/auth/cloud-platform
             redirect-uri: "http://localhost:8072/login/oauth2/code/google"
         provider:
           google:

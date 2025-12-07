@@ -11,6 +11,7 @@ import com.google.auth.oauth2.AccessToken;
 import com.google.auth.oauth2.GoogleCredentials;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.config.Customizer;
 import org.springframework.security.config.web.server.ServerHttpSecurity;
@@ -36,8 +37,7 @@ import java.util.stream.Collectors;
 @Configuration
 public class SecurityConfig {
 
-    //TODO add project id
-    private static final String PROJECT_ID = "";
+    private static final String PROJECT_ID = "book-reviews-479506";
 
     @Bean
     public SecurityWebFilterChain securityChain(ServerHttpSecurity http) {
@@ -46,7 +46,10 @@ public class SecurityConfig {
                         .authenticationSuccessHandler(successHandler()))
                 .oauth2Client(Customizer.withDefaults())
                 .authorizeExchange(exchange -> exchange
-                        //TODO add roles
+                        .pathMatchers(HttpMethod.GET, "/reviews/**").hasAnyRole("ADMIN", "USER", "MODERATOR")
+                        .pathMatchers(HttpMethod.POST, "/reviews/**").hasAnyRole("ADMIN", "USER", "MODERATOR")
+                        .pathMatchers(HttpMethod.PUT, "/reviews/**").hasAnyRole("ADMIN", "MODERATOR")
+                        .pathMatchers(HttpMethod.DELETE, "/reviews/**").hasAnyRole("ADMIN")
                         .anyExchange().authenticated()
                 );
          return http.build();
