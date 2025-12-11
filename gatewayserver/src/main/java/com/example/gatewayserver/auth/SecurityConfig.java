@@ -37,7 +37,7 @@ import java.util.stream.Collectors;
 public class SecurityConfig {
 
     //TODO add project id
-    private static final String PROJECT_ID = "";
+    private static final String PROJECT_ID = "tw-cloud-480122";
 
     @Bean
     public SecurityWebFilterChain securityChain(ServerHttpSecurity http) {
@@ -114,12 +114,14 @@ public class SecurityConfig {
         Policy policy = manager.projects().getIamPolicy(PROJECT_ID, policyRequest).execute();
 
         String email = oidcUser.getEmail();
-        String identifier = "user" + email;
+        String identifier = "user:" + email;
+
+        System.out.println("Processing IAM roles for user: " + email);
 
         return policy.getBindings().stream()
                 .filter(binding -> binding.getMembers() != null && binding.getMembers().contains(identifier))
                 .map(Binding::getRole)
-                .peek(role -> System.out.println("Role is:" + role))
+                .peek(role -> System.out.println("Email: " + email + " - Role: " + role))
                 .map(this::mapIamRolesToApplicationRoles)
                 .collect(Collectors.toSet());
     }

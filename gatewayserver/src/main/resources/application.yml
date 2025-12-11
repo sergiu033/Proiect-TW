@@ -22,8 +22,8 @@ spring:
         registration:
           google:
             #TODO add client id and client secret
-            client-id:
-            client-secret:
+            client-id: 936075236718-eevkhuttcute81relg01e299q0tgkce9.apps.googleusercontent.com
+            client-secret: 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
             scope: openid, profile, email, https://www.googleapis.com/auth/cloud-platform
             redirect-uri: "http://localhost:8072/login/oauth2/code/google"
         provider:
