@@ -1,21 +1,45 @@
 server:
   port: 8072
+
 spring:
   application:
     name: "gatewayserver"
+
   zipkin:
-    base-url: http://localhost:9411 #http://zipkin:9411
+    base-url: http://localhost:9411
+
   sleuth:
     sampler:
       probability: 1.0
+
   cloud:
     gateway:
       server:
         webflux:
           discovery:
             locator:
-              enabled: false # Tells Spring Cloud Gateway to use the DiscoveryClient to locate info about microservices
+              enabled: false
               lower-case-service-id: true
+
+          # Definirea explicită a rutelor
+          routes:
+            - id: user-service
+              uri: lb://user
+              predicates:
+                - Path=/api/users/**
+              filters:
+                - AddRequestHeader=X-Service, User-Service
+                - AddResponseHeader=X-Service, User-Service
+
+            - id: review-service
+              uri: lb://review
+              predicates:
+                - Path=/reviews/**
+
+          # Filtre globale
+          default-filters:
+            - PreserveHostHeader
+
   security:
     oauth2:
       client:
@@ -23,13 +47,19 @@ spring:
           google:
             client-id: 991955649342-2gpk5d4g8e1nh30j6sros762h4q9urqe.apps.googleusercontent.com
             client-secret: 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
-            scope: openid, profile, email, https://www.googleapis.com/auth/cloud-platform
+            scope:
+              - openid
+              - profile
+              - email
+              - https://www.googleapis.com/auth/cloud-platform
             redirect-uri: "http://localhost:8072/login/oauth2/code/google"
+
         provider:
           google:
             authorization-uri: https://accounts.google.com/o/oauth2/v2/auth
             token-uri: https://oauth2.googleapis.com/token
-            user-info-uri: https://www.googleapis.com/oauth2/v3/userinfo
+            user-info-uri: https://openidconnect.googleapis.com/v1/userinfo
+            jwk-set-uri: https://www.googleapis.com/oauth2/v3/certs
             user-name-attribute: sub
 
 eureka:
@@ -40,7 +70,7 @@ eureka:
     fetchRegistry: true
     registerWithEureka: true
     serviceUrl:
-      defaultZone: http://localhost:8070/eureka/  # http://eurekaserver:8070/eureka/
+      defaultZone: http://localhost:8070/eureka/
 
 management:
   tracing:
@@ -48,7 +78,7 @@ management:
       probability: 1.0
   zipkin:
     tracing:
-      endpoint: http://localhost:9411/api/v2/spans #http://zipkin:9411/api/v2/spans
+      endpoint: http://localhost:9411/api/v2/spans
   endpoints:
     web:
       exposure:
@@ -63,4 +93,9 @@ logging:
   level:
     com:
       example:
-        gatewayserver: INFO
+        gatewayserver: DEBUG
+    org:
+      springframework:
+        security: DEBUG
+        cloud:
+          gateway: DEBUG
