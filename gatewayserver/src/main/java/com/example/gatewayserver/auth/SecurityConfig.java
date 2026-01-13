@@ -50,6 +50,18 @@ public class SecurityConfig {
                         .pathMatchers(HttpMethod.POST, "/reviews/**").hasAnyRole("ADMIN", "USER", "MODERATOR")
                         .pathMatchers(HttpMethod.PUT, "/reviews/**").hasAnyRole("ADMIN", "MODERATOR")
                         .pathMatchers(HttpMethod.DELETE, "/reviews/**").hasAnyRole("ADMIN")
+
+                        .pathMatchers(HttpMethod.POST, "/api/users/login", "/api/users/{id}/logout").permitAll()
+
+                        .pathMatchers(HttpMethod.POST, "/api/users").hasRole("USER")
+                        .pathMatchers(HttpMethod.GET, "/api/users/**").hasAnyRole("USER", "ADMIN")
+                        .pathMatchers(HttpMethod.PUT, "/api/users/{id}").hasRole("USER")
+                        .pathMatchers(HttpMethod.DELETE, "/api/users/{id}").hasRole("USER")
+
+                        .pathMatchers(HttpMethod.GET, "/api/users/{id}").hasAnyRole("USER", "MODERATOR", "ADMIN")
+                        .pathMatchers(HttpMethod.POST, "/api/users/{id}/change-password").authenticated()
+
+                        .pathMatchers("/api/users/search", "/api/users/filter", "/api/users/sorted/**").hasAnyRole("ADMIN", "MODERATOR")
                         .anyExchange().authenticated()
                 );
          return http.build();
@@ -117,7 +129,7 @@ public class SecurityConfig {
         Policy policy = manager.projects().getIamPolicy(PROJECT_ID, policyRequest).execute();
 
         String email = oidcUser.getEmail();
-        String identifier = "user" + email;
+        String identifier = "user:" + email;
 
         return policy.getBindings().stream()
                 .filter(binding -> binding.getMembers() != null && binding.getMembers().contains(identifier))
