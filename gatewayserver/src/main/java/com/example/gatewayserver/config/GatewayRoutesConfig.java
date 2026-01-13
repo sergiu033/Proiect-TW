@@ -10,7 +10,17 @@ public class GatewayRoutesConfig {
 
     @Bean
     public RouteLocator routes(RouteLocatorBuilder builder) {
-//        add routes
-        return null;
+        return builder.routes()
+                .route("user-service", r -> r
+                        .path("/api/users/**")
+                        .filters(f -> f
+                                        .addRequestHeader("X-Service", "User-Service")
+                                        .addResponseHeader("X-Service", "User-Service")
+                        )
+                        .uri("lb://user"))
+                .route("review-service", r -> r
+                        .path("/reviews/**")
+                        .uri("lb://review"))
+                .build();
     }
 }
